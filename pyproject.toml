@@ -1,0 +1,49 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "gitsight"
+version = "1.0.0"
+description = "Semantic git history analysis — clusters commits into themes with AI labels"
+readme = "README.md"
+requires-python = ">=3.11"
+license = { text = "MIT" }
+authors = [{ name = "iamgeetarted", email = "marktimothydorsey@gmail.com" }]
+keywords = [
+    "git", "history", "semantic", "analysis", "ai", "llm", "commits",
+    "developer-tools", "cli", "asyncio", "numpy", "clustering",
+]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Environment :: Console",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Software Development :: Version Control :: Git",
+    "Topic :: Utilities",
+]
+dependencies = [
+    "numpy>=1.24",
+    "rich>=13.0",
+]
+
+[project.optional-dependencies]
+ai = ["anthropic>=0.20"]
+dev = ["pytest>=8.0", "pytest-asyncio>=0.23", "pytest-cov"]
+
+[project.scripts]
+gitsight = "gitsight.cli:entry_point"
+
+[project.urls]
+Homepage = "https://github.com/iamgeetarted/gitsight"
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["gitsight*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+asyncio_mode = "auto"
