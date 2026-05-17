@@ -2,6 +2,69 @@
 
 **Semantic git history analysis — clusters commits into themes with AI labels.**
 
+---
+
+## What's New in v1.1.0
+
+### 1. Config File Support (`~/.gitsight.toml`)
+
+Set persistent defaults in `~/.gitsight.toml` (global) or `.gitsight.toml` in any project directory. CLI flags always take precedence.
+
+```toml
+# ~/.gitsight.toml  or  ./.gitsight.toml
+model            = "claude-haiku-4-5-20251001"
+threshold        = 0.25
+min_cluster_size = 3
+concurrency      = 5
+max_commits      = 500
+no_ai            = false
+timeline         = true
+author_stats     = true
+```
+
+Supported keys: `model`, `threshold`, `min_cluster_size`, `concurrency`, `max_commits`, `no_ai`, `branch`, `export_format`, `timeline`, `author_stats`.
+
+### 2. Commit Timeline Chart (`--timeline`)
+
+Print a weekly commit-frequency bar chart before the clustering results. Each row is one calendar week; bar width is proportional to the busiest week. Shows up to 26 weeks of history.
+
+```bash
+gitsight . --timeline
+```
+
+```
+──────────────────── Commit Timeline  (weekly) ────────────────────
+ 2026-03-30  ████████████████░░░░░░░░░░░░░░░░  12
+ 2026-04-06  ████████████████████░░░░░░░░░░░░  15
+ 2026-04-13  ████████████████████████░░░░░░░░  18
+ 2026-04-20  ████████████████████████████████  24
+ 2026-04-27  ████████████░░░░░░░░░░░░░░░░░░░░   9
+ 2026-05-04  ████████████████░░░░░░░░░░░░░░░░  12
+ 2026-05-11  ████████░░░░░░░░░░░░░░░░░░░░░░░░   6
+```
+
+### 3. Author Velocity Table (`--author-stats`)
+
+Print a Rich table showing each contributor's commit count, active date range, span in days, and average commits per week. Sorted by total commits.
+
+```bash
+gitsight . --author-stats
+```
+
+```
+─────────────────────── Author Velocity ───────────────────────────
+╭──────────────────┬─────────┬─────────────┬─────────────┬──────────┬──────────╮
+│ Author           │ Commits │ First commit │ Last commit │ Span (d) │ Avg / wk │
+├──────────────────┼─────────┼─────────────┼─────────────┼──────────┼──────────┤
+│ Alice            │      89 │  2025-11-01 │  2026-05-10 │      190 │     3.3  │
+│ Bob              │      71 │  2025-11-15 │  2026-05-08 │      174 │     2.9  │
+│ Carol            │      47 │  2026-01-03 │  2026-05-01 │      118 │     2.8  │
+│ Dave             │      40 │  2025-12-01 │  2026-04-20 │      140 │     2.0  │
+╰──────────────────┴─────────┴─────────────┴─────────────┴──────────┴──────────╯
+```
+
+---
+
 gitsight reads your git log, groups commits by semantic similarity using TF-IDF vectors and cosine clustering, then streams Claude labels for each group to tell you *what* your codebase has been doing and *why* it matters.
 
 ```

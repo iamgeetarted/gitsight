@@ -50,6 +50,16 @@ async def _run_analysis(args: argparse.Namespace) -> int:
 
     print_summary_header(commits)
 
+    # ── Phase 1b: optional timeline chart ────────────────────────────────
+    if args.timeline:
+        from .timeline import print_timeline
+        print_timeline(commits)
+
+    # ── Phase 1c: optional author velocity table ──────────────────────────
+    if args.author_stats:
+        from .stats import print_author_stats
+        print_author_stats(commits)
+
     # ── Phase 2: vector clustering ─────────────────────────────────────────
     messages = [c.message for c in commits]
     matrix, vocab = embed_messages(messages)
@@ -75,7 +85,6 @@ async def _run_analysis(args: argparse.Namespace) -> int:
     labels = []
 
     if args.no_ai:
-        # Fallback: generate labels from keywords only
         from .analysis import ThemeLabel
         for kws in keywords_per_cluster:
             title = " / ".join(kws[:3]).title() if kws else "Uncategorised"
@@ -183,7 +192,7 @@ async def _run_analysis(args: argparse.Namespace) -> int:
 # Parser
 # ---------------------------------------------------------------------------
 
-def _build_parser() -> argparse.ArgumentParser:
+def _build_parser(cfg: dict) -> argparse.ArgumentParser:
     p = argparse.ArgumentParser(
         prog="gitsight",
         description="Semantic git history analysis — clusters commits into themes with AI labels.",
@@ -198,6 +207,18 @@ examples:
   gitsight . --threshold 0.3              # tighter clusters
   gitsight . --output report.md           # export Markdown report
   gitsight . --output report.json         # export JSON report
+  gitsight . --timeline                   # show weekly commit frequency chart
+  gitsight . --author-stats               # show per-author velocity table
+
+config file (~/.gitsight.toml or .gitsight.toml):
+  model            = "claude-haiku-4-5-20251001"
+  threshold        = 0.20
+  min_cluster_size = 2
+  concurrency      = 3
+  max_commits      = 200
+  no_ai            = false
+  timeline         = false
+  author_stats     = false
 
 environment:
   ANTHROPIC_API_KEY   Required for AI labeling (set --no-ai to skip)
@@ -213,7 +234,7 @@ environment:
     p.add_argument(
         "--max-commits", "-n",
         type=int,
-        default=200,
+        default=cfg.get("max_commits", 200),
         metavar="N",
         help="Maximum commits to analyze (default: 200)",
     )
@@ -234,39 +255,40 @@ environment:
     )
     p.add_argument(
         "--branch",
-        default="HEAD",
+        default=cfg.get("branch", "HEAD"),
         metavar="REF",
         help="Branch or ref to analyze (default: HEAD)",
     )
     p.add_argument(
         "--threshold",
         type=float,
-        default=0.20,
+        default=cfg.get("threshold", 0.20),
         metavar="FLOAT",
         help="Cosine similarity threshold for clustering 0.0–1.0 (default: 0.20)",
     )
     p.add_argument(
         "--min-cluster-size",
         type=int,
-        default=2,
+        default=cfg.get("min_cluster_size", 2),
         metavar="N",
         help="Minimum commits for a cluster to be reported (default: 2)",
     )
     p.add_argument(
         "--no-ai",
         action="store_true",
+        default=cfg.get("no_ai", False),
         help="Skip Claude labeling — show vector clusters with keyword labels only",
     )
     p.add_argument(
         "--model",
-        default="claude-haiku-4-5-20251001",
+        default=cfg.get("model", "claude-haiku-4-5-20251001"),
         metavar="MODEL",
         help="Claude model ID (default: claude-haiku-4-5-20251001)",
     )
     p.add_argument(
         "--concurrency",
         type=int,
-        default=3,
+        default=cfg.get("concurrency", 3),
         metavar="N",
         help="Max concurrent Claude API calls (default: 3)",
     )
@@ -278,8 +300,20 @@ environment:
     p.add_argument(
         "--export-format",
         choices=["json", "markdown"],
-        default=None,
+        default=cfg.get("export_format", None),
         help="Force export format (inferred from --output extension by default)",
+    )
+    p.add_argument(
+        "--timeline",
+        action="store_true",
+        default=cfg.get("timeline", False),
+        help="Print a weekly commit-frequency bar chart before clustering",
+    )
+    p.add_argument(
+        "--author-stats",
+        action="store_true",
+        default=cfg.get("author_stats", False),
+        help="Print a per-author velocity table (commit count, cadence, date range)",
     )
     return p
 
@@ -290,7 +324,14 @@ environment:
 
 def main(argv: list[str] | None = None) -> int:
     """Parse arguments and run the analysis."""
-    parser = _build_parser()
+    try:
+        from .config import load_config
+        cfg = load_config()
+    except ValueError as exc:
+        print(f"gitsight: config error: {exc}", file=sys.stderr)
+        return 2
+
+    parser = _build_parser(cfg)
     args = parser.parse_args(argv)
 
     try:
