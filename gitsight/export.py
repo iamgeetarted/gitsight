@@ -1,7 +1,9 @@
-"""Export analysis results to JSON and Markdown."""
+"""Export analysis results to JSON, Markdown, and CSV."""
 
 from __future__ import annotations
 
+import csv
+import io
 import json
 from datetime import datetime, timezone
 from pathlib import Path
@@ -131,3 +133,35 @@ def to_markdown(
         ]
 
     return "\n".join(lines)
+
+
+def to_csv(
+    commits: list[Commit],
+    clusters: list[list[int]],
+    labels: list[ThemeLabel],
+) -> str:
+    """Serialise analysis results to a CSV string.
+
+    Each row represents one commit with its assigned theme title.
+    Commits not assigned to any cluster are labelled "Unclustered".
+
+    Args:
+        commits: All commits analyzed.
+        clusters: Index-lists grouping commit positions.
+        labels: ThemeLabel for each cluster.
+
+    Returns:
+        CSV string with header row.
+    """
+    index_to_theme: dict[int, str] = {}
+    for cluster_indices, label in zip(clusters, labels):
+        for i in cluster_indices:
+            index_to_theme[i] = label.title
+
+    buf = io.StringIO()
+    writer = csv.writer(buf, lineterminator="\n")
+    writer.writerow(["sha", "date", "author", "theme", "subject"])
+    for i, c in enumerate(commits):
+        theme = index_to_theme.get(i, "Unclustered")
+        writer.writerow([c.sha[:8], c.date_str, c.author, theme, c.subject])
+    return buf.getvalue()

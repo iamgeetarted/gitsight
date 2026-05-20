@@ -4,6 +4,56 @@
 
 ---
 
+## What's New in v1.2.0
+
+### 1. File Churn Heatmap (`gitsight hotfiles`)
+
+New subcommand that parses `git log --numstat` and renders a colour-coded heatmap of the files that change most often. Red bars = hottest files; great for identifying refactoring targets or areas of high risk.
+
+```bash
+gitsight hotfiles .                    # top 20 hottest files
+gitsight hotfiles . --top 40           # top 40
+gitsight hotfiles . --since "6 months ago"
+gitsight hotfiles . --output churn.csv # save raw data as CSV
+```
+
+```
+────────────────── File Churn Heatmap  (most-changed files) ──────────────────
+╭────┬───────────────────────────────────────────┬─────────┬──────────────────────┬────────┬────────╮
+│  # │ File                                      │ Commits │ Heat                 │ +Lines │ -Lines │
+├────┼───────────────────────────────────────────┼─────────┼──────────────────────┼────────┼────────┤
+│  1 │ src/auth/middleware.py                    │      31 │ ████████████████████ │ +2,847 │   -983 │
+│  2 │ src/db/migrations/__init__.py             │      24 │ ████████████████░░░░ │ +4,102 │ -1,240 │
+│  3 │ tests/test_auth.py                        │      19 │ █████████████░░░░░░░ │ +1,544 │   -612 │
+│  4 │ src/api/routes.py                         │      17 │ ███████████░░░░░░░░░ │   +890 │   -341 │
+│  5 │ pyproject.toml                            │      12 │ ████████░░░░░░░░░░░░ │    +48 │    -31 │
+╰────┴───────────────────────────────────────────┴─────────┴──────────────────────┴────────┴────────╯
+Showing top 5 of 47 files with ≥2 commits.
+```
+
+### 2. CSV Export (`--output report.csv`)
+
+The `--output` flag now accepts `.csv` files. Each row is one commit with its assigned theme title — perfect for importing into spreadsheets or piping to other tools.
+
+```bash
+gitsight . --output report.csv
+# Columns: sha, date, author, theme, subject
+```
+
+### 3. Verbose Timing (`--verbose`)
+
+Pass `--verbose` (or `-v`) to see execution time for each pipeline phase — git log, vector embedding, and AI labeling. Useful for profiling large repos.
+
+```bash
+gitsight . --verbose
+#   git log: 347 commits in 0.14s
+#   vector embed+cluster: vocab=892 terms, 6 clusters, 0.031s
+#   AI labeling: 6 labels in 2.71s
+#   Done.  6 themes · 281 clustered · 66 unclustered  (3.2s)
+```
+
+---
+
 ## What's New in v1.1.0
 
 ### 1. Config File Support (`~/.gitsight.toml`)
@@ -167,29 +217,35 @@ test coverage before the next release cycle.
 ## All Options
 
 ```
-usage: gitsight [-h] [--version] [--max-commits N] [--since DATE]
-                [--until DATE] [--author PATTERN] [--branch REF]
-                [--threshold FLOAT] [--min-cluster-size N]
-                [--no-ai] [--model MODEL] [--concurrency N]
-                [--output FILE] [--export-format {json,markdown}]
-                [repo]
+usage: gitsight [COMMAND] [options] [repo]
 
-positional arguments:
-  repo                    Path to git repository (default: .)
+commands:
+  analyse   (default) Cluster commits into themes with AI labels
+  hotfiles            File churn heatmap — which files change most
 
-options:
+common options:
   --max-commits N         Maximum commits to analyze (default: 200)
   --since DATE            Only commits after this date, e.g. "3 months ago"
   --until DATE            Only commits before this date
   --author PATTERN        Filter by author name or email
   --branch REF            Branch or ref to analyze (default: HEAD)
+
+analyse options:
   --threshold FLOAT       Cosine similarity threshold 0.0–1.0 (default: 0.20)
   --min-cluster-size N    Min commits per cluster (default: 2)
   --no-ai                 Keyword labels only, skip Claude API
   --model MODEL           Claude model ID (default: claude-haiku-4-5-20251001)
   --concurrency N         Max concurrent Claude calls (default: 3)
-  --output FILE           Write report to FILE (.md or .json)
-  --export-format         Force json or markdown (inferred from extension)
+  --output FILE           Write report to FILE (.md, .json, or .csv)
+  --export-format         Force json, markdown, or csv (inferred from extension)
+  --timeline              Show weekly commit-frequency chart
+  --author-stats          Show per-author velocity table
+  --verbose, -v           Show timing for each pipeline phase
+
+hotfiles options:
+  --top N                 Show top N files (default: 20)
+  --min-commits N         Min commits to include a file (default: 2)
+  --output FILE           Save raw churn data as CSV
 ```
 
 ## How It Works

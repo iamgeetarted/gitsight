@@ -19,6 +19,7 @@ _VALID_KEYS = {
     "export_format",
     "timeline",
     "author_stats",
+    "verbose",
 }
 
 
